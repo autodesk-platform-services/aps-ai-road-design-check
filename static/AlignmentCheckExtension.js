@@ -38,7 +38,9 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                 if (result.isConfirmed) {
                     //get the selected pdf
                     const pdfSelect = document.getElementById('pdfSelect');
-                    const pdfId = pdfSelect.value;
+                    const pdfValue = pdfSelect.value;
+                    const vectorStoreId = pdfValue.split('/')[1];
+                    const openaiFileId = pdfValue.split('/')[0];
 
                     //aggregate the alignmentCheckData as string
                     let curves = '';
@@ -60,7 +62,8 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                         },
                         body: JSON.stringify({
                             question: 'Check the curves against the road design standards: ' + curves,
-                            pdf_id: pdfId
+                            openai_file_id: openaiFileId,
+                            vector_store_id: vectorStoreId
                         })
                     });
                     if (resp.ok) {

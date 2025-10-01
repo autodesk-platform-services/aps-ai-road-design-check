@@ -61,8 +61,7 @@ aps-road-design-check/
 │   ├── HubsController.py   # Hubs & data browsing controller
 │   └── OpenAIController.py # PDF indexing for OpenAI
 ├── uploads/
-│   ├── temp/           # Temporary PDF uploads (gitignored)
-│   └── indexed_pdfs.json  # PDF metadata registry (gitignored)
+│   └── temp/           # Temporary PDF uploads (gitignored)
 ├── templates/
 │   └── index.html      # Single page application
 ├── static/
@@ -120,12 +119,13 @@ Handles APS Data Management API for browsing:
 
 Handles PDF indexing for OpenAI knowledge base using the [OpenAI Python library](https://pypi.org/project/openai/2.0.0/):
 
-- `GET /api/openai/indexedpdfs` - List all indexed PDFs
+- `GET /api/openai/indexedpdfs` - List all indexed PDFs from OpenAI vector stores
 - `POST /api/openai/indexpdf` - Upload and index a new PDF
   - Accepts: `multipart/form-data` with `file` field
   - Extracts text from PDF using PyPDF2
-  - Uploads file to OpenAI for assistant use
-  - Stores OpenAI file ID and metadata (no local storage)
+  - Uploads file to OpenAI
+  - Creates vector store for semantic search
+  - No local metadata storage - everything in OpenAI
   - Removes temporary file after upload
 - `POST /api/openai/query` - Query the knowledge base using OpenAI Responses API
   - Accepts: JSON with `{ "question": "your question", "pdf_id": optional_id }`

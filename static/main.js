@@ -25,7 +25,7 @@ try {
         const pdfList = await indexedPDFs.json();
         pdfList.forEach(pdf => {
             const option = document.createElement('option');
-            option.value = pdf.id;
+            option.value = `${pdf.openai_file_id}/${pdf.vector_store_id}`;
             option.innerText = pdf.filename;
             pdfSelect.appendChild(option);
         });

@@ -19,9 +19,8 @@ instance/
 .flaskenv
 !.env.example
 
-# Uploads (temp files and metadata)
-uploads/temp/
-uploads/*.json
+# Uploads (temp files only)
+uploads/
 *.pdf
 
 # IDE
