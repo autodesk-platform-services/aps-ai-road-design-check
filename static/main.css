@@ -38,7 +38,16 @@ body, html {
     margin: 0 0.5em;
 }
 
-#login {
+#login, #indexpdf {
+    font-family: ArtifaktElement;
+    font-size: 1em;
+}
+
+#login:hover, #indexpdf:hover {
+    background-color: #0572a8;
+}
+
+#pdfSelect {
     font-family: ArtifaktElement;
     font-size: 1em;
 }

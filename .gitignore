@@ -19,8 +19,15 @@ instance/
 .flaskenv
 !.env.example
 
+# Uploads (temp files and metadata)
+uploads/temp/
+uploads/*.json
+*.pdf
+
 # IDE
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
 .idea/
 *.swp
 *.swo

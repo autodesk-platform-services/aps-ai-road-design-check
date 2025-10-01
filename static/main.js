@@ -19,6 +19,41 @@ try {
         }
         const viewer = await initViewer(document.getElementById('preview'));
         initTree('#tree', (id) => loadModel(viewer, window.btoa(id).replace(/=/g, '')));
+        // Populate the PDF selection dropdown
+        const pdfSelect = document.getElementById('pdfSelect');
+        const indexedPDFs = await fetch('/api/openai/indexedpdfs');
+        const pdfList = await indexedPDFs.json();
+        pdfList.forEach(pdf => {
+            const option = document.createElement('option');
+            option.value = pdf.id;
+            option.innerText = pdf.filename;
+            pdfSelect.appendChild(option);
+        });
+
+        //Index a PDF to be used as knowledge base for OpenAI
+        const indexPDFButton = document.getElementById('indexpdf');
+        indexPDFButton.onclick = async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/pdf';
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const resp = await fetch('/api/openai/indexpdf', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (resp.ok) {
+                        alert('PDF indexed successfully');
+                    } else {
+                        alert('Failed to index PDF');
+                    }
+                }
+            };
+            input.click();
+        };
     } else {
         login.innerText = 'Login';
         login.onclick = () => window.location.replace('/api/auth/login');
