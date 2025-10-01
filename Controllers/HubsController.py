@@ -13,6 +13,7 @@ hubs_bp = Blueprint('hubs', __name__, url_prefix='/api/hubs')
 
 # APS API endpoints
 APS_BASE_URL = 'https://developer.api.autodesk.com'
+ACC_ISSUES_BASE = 'https://developer.api.autodesk.com/construction/issues/v1'
 
 
 def require_auth(f):
@@ -164,3 +165,51 @@ def get_versions(hub_id, project_id, item_id):
         
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Failed to fetch versions: {str(e)}'}), 500
+
+
+@hubs_bp.route('/projects/<project_id>/issues', methods=['POST'])
+@require_auth
+def create_issue(project_id):
+    """
+    Creates an ACC issue in the specified project.
+    """
+    payload = request.get_json() or {}
+
+    # Minimal validation
+    title = payload.get('title')
+    issue_type_id = payload.get('issue_subtype_id')
+    if not title or not issue_type_id:
+        return jsonify({'error': 'title and issue_subtype_id are required'}), 400
+
+    try:
+        # Prefer project-based endpoint
+        url = f"{ACC_ISSUES_BASE}/projects/{project_id}/issues"
+        body = {
+            'title': title,
+            'description': payload.get('description'),
+            'issueSubtypeId': issue_type_id,
+            'status': payload.get('status')
+        }
+
+        # Remove None values to satisfy API schema
+        body = {k: v for k, v in body.items() if v is not None}
+
+        response = requests.post(url, headers=get_headers(), json=body)
+        response.raise_for_status()
+
+        return jsonify(response.json()), 201
+
+    except requests.exceptions.HTTPError as http_err:
+        # Fallback to container-based creation if server indicates project path not allowed
+        if payload.get('container_id'):
+            try:
+                container_url = f"{ACC_ISSUES_BASE}/containers/{payload['container_id']}/issues"
+                response = requests.post(container_url, headers=get_headers(), json=body)
+                response.raise_for_status()
+                return jsonify(response.json()), 201
+            except requests.exceptions.RequestException as e:
+                return jsonify({'error': f'Failed to create issue via container: {str(e)}'}), 500
+        return jsonify({'error': f'Failed to create issue: {str(http_err)}', 'details': response.text if 'response' in locals() else ''}), 500
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Failed to create issue: {str(e)}'}), 500
+

@@ -16,7 +16,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 APS_CLIENT_ID = os.getenv('APS_CLIENT_ID', '')
 APS_CLIENT_SECRET = os.getenv('APS_CLIENT_SECRET', '')
 APS_CALLBACK_URL = os.getenv('APS_CALLBACK_URL', 'http://localhost:8080/api/auth/callback')
-APS_SCOPES = ['data:read']
+APS_SCOPES = ['data:read','data:write']
 
 AUTODESK_AUTH_URL = 'https://developer.api.autodesk.com/authentication/v2/authorize'
 AUTODESK_TOKEN_URL = 'https://developer.api.autodesk.com/authentication/v2/token'

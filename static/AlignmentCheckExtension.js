@@ -29,18 +29,30 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                 alignmentCheckData[property.displayCategory][property.displayName] = property.displayValue;
             }
             swal.fire({
-                title: 'Alignment Check',
-                html: `<table>${Object.entries(alignmentCheckData).map(([key, value]) => `<tr><td>${key}</td><td>${value.result}</td></tr>`).join('')}</table>`,
+                title: 'Perform Alignment Check?',
+                html: `
+                    <div style="display: flex; flex-direction: column; align-items: center;">
+                        <div style="margin-bottom: 1em;">
+                            <label for="maxSpeedSlider"><b>Maximum Speed (mph):</b> <span id="maxSpeedValue">50</span></label><br>
+                            <input type="range" id="maxSpeedSlider" min="10" max="120" value="50" step="1" style="width: 300px;" oninput="document.getElementById('maxSpeedValue').textContent = this.value;">
+                        </div>
+                        <table style="margin: 0 auto;">
+                            ${Object.entries(alignmentCheckData).map(([key, value]) => `<tr><td>${key}</td><td>${value.result}</td></tr>`).join('')}
+                        </table>
+                    </div>
+                `,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: 'Start Check'
+                confirmButtonText: 'Yes'
             }).then(async (result) => {
                 if (result.isConfirmed) {
                     //get the selected pdf
                     const pdfSelect = document.getElementById('pdfSelect');
                     const pdfValue = pdfSelect.value;
-                    const vectorStoreId = pdfValue.split('/')[1];
-                    const openaiFileId = pdfValue.split('/')[0];
+                    const vectorStoreId = pdfValue
+                    // Retrieve the selected speed from the slider
+                    const maxSpeedSlider = document.getElementById('maxSpeedSlider');
+                    const selectedSpeed = maxSpeedSlider ? maxSpeedSlider.value : 50;
 
                     //aggregate the alignmentCheckData as string
                     let curves = '';
@@ -50,6 +62,7 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                             Object.keys(alignmentCheckData[key]).forEach(key2 => {
                                 curves += `${key2}: ${alignmentCheckData[key][key2]}\n`;
                             });
+                            curves += `Max Speed: ${selectedSpeed} mph\n`;
                             curves += '\n';
                         }
                         
@@ -62,16 +75,16 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                         },
                         body: JSON.stringify({
                             question: 'Check the curves against the road design standards: ' + curves,
-                            openai_file_id: openaiFileId,
                             vector_store_id: vectorStoreId
                         })
                     });
                     if (resp.ok) {
                         const data = await resp.json();
-                        //update the checked properties
-                        alignmentCheckData.filter(property => !property.checked).forEach(property => {
-                            property.checked = true;
-                            property.result = data.answer;
+                        //show the data back to the user formatted using swal
+                        swal.fire({
+                            title: 'Alignment Check Result',
+                            html: data.answer,
+                            icon: 'info'
                         });
                         console.log(data);
                     } else {

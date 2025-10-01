@@ -6,9 +6,7 @@ Handles PDF indexing and retrieval for OpenAI knowledge base
 import os
 from datetime import datetime
 from flask import Blueprint, request, jsonify
-from werkzeug.utils import secure_filename
 from openai import OpenAI
-from PyPDF2 import PdfReader
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -17,17 +15,14 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 openai_bp = Blueprint('openai', __name__, url_prefix='/api/openai')
 
 
-# Ensure temp upload directory exists
-os.makedirs(TEMP_UPLOAD_FOLDER, exist_ok=True)
-
-def upload_to_openai(filepath, filename):
+def upload_to_openai(file_storage):
     """Upload PDF file to OpenAI for assistant use"""
     try:
-        with open(filepath, 'rb') as file:
-            response = client.files.create(
-                file=file,
-                purpose='assistants'
-            )
+        # OpenAI expects a tuple of (filename, file_object, content_type)
+        response = client.files.create(
+            file=(file_storage.filename, file_storage.stream, file_storage.content_type),
+            purpose='assistants'
+        )
         return response.id
     except Exception as e:
         raise Exception(f"Failed to upload to OpenAI: {str(e)}")
@@ -47,7 +42,7 @@ def get_indexed_pdfs():
         pdfs = []
         for vs in vector_stores.data:
             pdfs.append({
-                'id': vs.id,
+                'vector_store_id': vs.id,
                 'filename': vs.name,
                 'created_at': vs.created_at
             })
@@ -75,40 +70,16 @@ def index_pdf():
         if file.filename == '':
             return jsonify({'error': 'No file selected'}), 400
         
-        # Validate file type
-        if not allowed_file(file.filename):
-            return jsonify({'error': 'Only PDF files are allowed'}), 400
-        
-        # Secure the filename and save to temp location
-        filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        temp_filename = f"{timestamp}_{filename}"
-        filepath = os.path.join(TEMP_UPLOAD_FOLDER, temp_filename)
-        
-        file.save(filepath)
-        
-        # Validate it's a valid PDF
-        try:
-            PdfReader(filepath)
-        except Exception as e:
-            # Clean up the temporary file
-            if os.path.exists(filepath):
-                os.remove(filepath)
-            return jsonify({'error': f'Invalid PDF file: {str(e)}'}), 400
-        
         # Upload to OpenAI
         try:
-            openai_file_id = upload_to_openai(filepath, filename)
+            openai_file_id = upload_to_openai(file)
         except Exception as e:
-            # Clean up the temporary file
-            if os.path.exists(filepath):
-                os.remove(filepath)
             return jsonify({'error': f'Failed to upload to OpenAI: {str(e)}'}), 500
         
         # Create vector store for this PDF
         try:
             vector_store = client.vector_stores.create(
-                name=f"{filename} - {datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                name=f"{file.filename} - {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             )
             
             # Add file to the vector store
@@ -119,25 +90,19 @@ def index_pdf():
             vector_store_id = vector_store.id
         except Exception as e:
             # Clean up if vector store creation fails
-            if os.path.exists(filepath):
-                os.remove(filepath)
             try:
                 client.files.delete(openai_file_id)
             except:
                 pass
             return jsonify({'error': f'Failed to create vector store: {str(e)}'}), 500
-        
-        # Delete the local file after successful upload to OpenAI
-        if os.path.exists(filepath):
-            os.remove(filepath)
-        
+
         return jsonify({
             'success': True,
             'message': 'PDF indexed successfully',
             'pdf': {
                 'vector_store_id': vector_store_id,
                 'openai_file_id': openai_file_id,
-                'filename': filename
+                'filename': file.filename
             }
         }), 200
         
@@ -161,7 +126,6 @@ def query_knowledge_base():
         
         question = data['question']
         vector_store_id = data.get('vector_store_id')
-        openai_file_id = data.get('openai_file_id')
         
         # Get vector store IDs from OpenAI
         if vector_store_id:
@@ -187,12 +151,22 @@ def query_knowledge_base():
         response = client.responses.create(
             model="gpt-4o",
             instructions="""You are a helpful assistant specialized in road design standards and regulations.
-            Use the file_search tool to find relevant information in the uploaded PDF documents.
-            When answering questions:
-            1. Always cite the specific document and section
-            2. Provide clear, accurate answers based on the documents
-            3. If the answer is not in the documents, clearly state that
-            4. Quote relevant passages when helpful""",
+            Use the file_search tool to find requirements in the uploaded PDF documents.
+            Task: evaluate the road curve(s) described in the user's question for compliance.
+            1) Extract all available curve parameters from the question (e.g., design speed, horizontal radius, superelevation rate).
+            2) Search the knowledge base for the governing requirements/limits that apply to those parameters (cite document and section).
+            3) Determine compliance. If any non-compliance is found, report each issue with:
+               - Parameter and provided value
+               - Required value or range and the threshold
+               - Brief rationale (why it fails)
+               - A concrete recommendation to comply (e.g., new radius/length or speed)
+            4) If compliant, state that explicitly and still provide the key citations that justify it.
+            5) If crucial inputs are missing or ambiguous, ask for them explicitly before concluding.
+            Format:
+            - Assessment
+            - Violations (if any)
+            - Citations
+            - Recommendations""",
             input=question,
             tools=[{
                 "type": "file_search",
@@ -210,22 +184,3 @@ def query_knowledge_base():
         
     except Exception as e:
         return jsonify({'error': f'Failed to query knowledge base: {str(e)}'}), 500
-
-
-@openai_bp.route('/pdf/<vector_store_id>', methods=['DELETE'])
-def delete_pdf(vector_store_id):
-    """
-    DELETE /api/openai/pdf/{vector_store_id}
-    Removes a PDF by deleting its vector store from OpenAI
-    """
-    try:
-        # Delete vector store from OpenAI (this also removes associated files)
-        client.vector_stores.delete(vector_store_id)
-        
-        return jsonify({
-            'success': True,
-            'message': 'PDF deleted successfully'
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': f'Failed to delete PDF: {str(e)}'}), 500

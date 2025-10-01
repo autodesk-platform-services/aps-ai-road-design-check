@@ -18,11 +18,13 @@ async function getHubs() {
 }
 
 async function getProjects(hubId) {
+    selectedHubId = hubId.replace('b.','');
     const projects = await getJSON(`/api/hubs/${hubId}/projects`);
     return projects.map(project => createTreeNode(`project|${hubId}|${project.id}`, project.name, 'icon-project', true));
 }
 
 async function getContents(hubId, projectId, folderId = null) {
+    selectedProjectId = projectId.replace('b.','');
     const contents = await getJSON(`/api/hubs/${hubId}/projects/${projectId}/contents` + (folderId ? `?folder_id=${folderId}` : ''));
     return contents.map(item => {
         if (item.folder) {
