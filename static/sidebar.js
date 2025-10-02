@@ -25,6 +25,18 @@ async function getProjects(hubId) {
 
 async function getContents(hubId, projectId, folderId = null) {
     selectedProjectId = projectId.replace('b.','');
+    try {
+        issueSubTypes = {};
+        let issueTypes = await getJSON(`/api/hubs/projects/${selectedProjectId}/issue-types`);
+        issueTypes['results'].forEach(issueType => {
+            issueType['subtypes'].forEach(subtype => {
+                issueSubTypes[issueType['title']+'-'+subtype['title']] = subtype['id'];
+            });
+        });
+    } catch (error) {
+        console.error(error + ' trying to retrieve issues typesfor project ' + projectId);
+    }
+
     const contents = await getJSON(`/api/hubs/${hubId}/projects/${projectId}/contents` + (folderId ? `?folder_id=${folderId}` : ''));
     return contents.map(item => {
         if (item.folder) {

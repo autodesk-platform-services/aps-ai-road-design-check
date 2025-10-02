@@ -191,25 +191,38 @@ def create_issue(project_id):
             'status': payload.get('status')
         }
 
-        # Remove None values to satisfy API schema
-        body = {k: v for k, v in body.items() if v is not None}
+        headers = get_headers()
+        headers['Content-Type'] = 'application/json'
 
-        response = requests.post(url, headers=get_headers(), json=body)
+        response = requests.post(url, headers=headers, data=jsonify(body).data)
         response.raise_for_status()
 
         return jsonify(response.json()), 201
 
     except requests.exceptions.HTTPError as http_err:
-        # Fallback to container-based creation if server indicates project path not allowed
-        if payload.get('container_id'):
-            try:
-                container_url = f"{ACC_ISSUES_BASE}/containers/{payload['container_id']}/issues"
-                response = requests.post(container_url, headers=get_headers(), json=body)
-                response.raise_for_status()
-                return jsonify(response.json()), 201
-            except requests.exceptions.RequestException as e:
-                return jsonify({'error': f'Failed to create issue via container: {str(e)}'}), 500
         return jsonify({'error': f'Failed to create issue: {str(http_err)}', 'details': response.text if 'response' in locals() else ''}), 500
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Failed to create issue: {str(e)}'}), 500
 
+
+@hubs_bp.route('/projects/<project_id>/issue-types', methods=['GET'])
+@require_auth
+def get_issue_types(project_id):
+    """
+    Returns ACC issue types including subtypes for the given project.
+    """
+    region = request.args.get('region')
+
+    headers = get_headers()
+    if region:
+        headers['x-ads-region'] = region if region else 'US'
+
+    params = {'include': 'subtypes'}
+
+    try:
+        url = f"{ACC_ISSUES_BASE}/projects/{project_id}/issue-types"
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        return jsonify(response.json()), 200
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Failed to fetch issue types: {str(e)}'}), 500

@@ -166,7 +166,9 @@ def query_knowledge_base():
             - Assessment
             - Violations (if any)
             - Citations
-            - Recommendations""",
+            - Recommendations
+            KEEP THE ANSWER BELOW 1000 CHARACTERS
+            """,
             input=question,
             tools=[{
                 "type": "file_search",
