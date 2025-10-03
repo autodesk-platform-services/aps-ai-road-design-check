@@ -19,6 +19,35 @@ try {
         }
         const viewer = await initViewer(document.getElementById('preview'));
         initTree('#tree', (id) => loadModel(viewer, window.btoa(id).replace(/=/g, '')));
+
+        //load a json file to be used as base for Deterministic Alignment Check
+        const jsonInputButton = document.getElementById('jsonInput');
+        jsonInputButton.onclick = async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'application/json';
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    //send the file to the server
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const resp = await fetch('/api/json/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        jsonInput = data.data;
+                        console.log('Design standards loaded to jsonInput:', jsonInput);
+                    } else {
+                        alert('Failed to upload JSON file');
+                    }
+                }
+            };
+            input.click();
+        };
+
         // Populate the PDF selection dropdown
         const pdfSelect = document.getElementById('pdfSelect');
         const indexedPDFs = await fetch('/api/openai/indexedpdfs');
