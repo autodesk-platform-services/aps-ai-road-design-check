@@ -1,8 +1,12 @@
 # APS Road Design Check
 
-A Python Flask web application using Autodesk Platform Services (APS) for road design checking.
+A Python Flask web application using Autodesk Platform Services (APS) for road design checking (Curves specifically).
+This sample reads data from Department of Transportation standards and compare against the data from alignments from a Civil 3D design. It works for also for NWCs ;).
 
-# THIS IS A WORK IN PROGRESS
+There are two ways to perform this comparision:
+
+1. Using the `AlignmentCheckExtensionAI` extension that leverages OpenAI to verify against standards indexed from PDFs
+2. Using the `AlignmentCheckExtensionJSON` extension that leverages a method 100% deterministic to verify against standards from a structured json containing the specific rules.
 
 ## Requirements
 
@@ -51,92 +55,6 @@ python app.py
 
 The application will be available at `http://localhost:8080`
 
-**Note:** The application will automatically validate that all required environment variables are set. If any are missing, it will exit with a clear error message indicating which variables need to be configured.
-
-## Project Structure
-
-```
-aps-road-design-check/
-├── app.py              # Main Flask application
-├── Controllers/
-│   ├── AuthController.py   # Authentication controller
-│   ├── HubsController.py   # Hubs & data browsing controller
-│   └── OpenAIController.py # PDF indexing for OpenAI
-├── uploads/
-│   └── temp/           # Temporary PDF uploads (gitignored)
-├── templates/
-│   └── index.html      # Single page application
-├── static/
-│   ├── main.css        # Main stylesheet
-│   ├── main.js         # Main JavaScript
-│   ├── sidebar.js      # Sidebar tree logic
-│   └── viewer.js       # APS Viewer logic
-├── .env.example        # Environment variables template
-├── pyproject.toml      # Project configuration & dependencies
-└── README.md           # This file
-```
-
-## Architecture
-
-This project uses a simple Flask structure based on the Autodesk Platform Services hub browser pattern:
-
-- **View** (`templates/index.html`): Single page interface with sidebar and viewer
-- **Static Assets** (`static/`): CSS and JavaScript modules
-- **Routes** (`app.py`): Flask routes - controllers will be added incrementally
-
-## Features
-
-- APS Viewer integration for 3D model viewing
-- Tree navigation for browsing hubs, projects, and files
-- Authentication with Autodesk accounts
-- Responsive design
-
-## Controllers
-
-### AuthController ✅
-
-Handles Autodesk OAuth authentication flow with automatic token refresh:
-
-- `GET /api/auth/login` - Initiates OAuth login
-- `GET /api/auth/callback` - OAuth callback handler
-  - Exchanges authorization code for tokens
-  - Stores access token, refresh token, and expiration time
-- `GET /api/auth/logout` - Logout and clear session
-- `GET /api/auth/profile` - Get current user profile
-- `GET /api/auth/token` - Get access token for Viewer
-  - Auto-refreshes token if expired or expiring soon (within 5 minutes)
-- `POST /api/auth/refresh` - Manually refresh the access token
-
-### HubsController ✅
-
-Handles APS Data Management API for browsing:
-
-- `GET /api/hubs` - List all accessible hubs
-- `GET /api/hubs/{hub_id}/projects` - List projects in a hub
-- `GET /api/hubs/{hub_id}/projects/{project_id}/contents` - Get folder/file contents
-  - Optional query param: `?folder_id={folder_id}` (returns top-level folders if omitted)
-- `GET /api/hubs/{hub_id}/projects/{project_id}/contents/{item_id}/versions` - Get file versions
-
-### OpenAIController ✅
-
-Handles PDF indexing for OpenAI knowledge base using the [OpenAI Python library](https://pypi.org/project/openai/2.0.0/):
-
-- `GET /api/openai/indexedpdfs` - List all indexed PDFs from OpenAI vector stores
-- `POST /api/openai/indexpdf` - Upload and index a new PDF
-  - Accepts: `multipart/form-data` with `file` field
-  - Extracts text from PDF using PyPDF2
-  - Uploads file to OpenAI
-  - Creates vector store for semantic search
-  - No local metadata storage - everything in OpenAI
-  - Removes temporary file after upload
-- `POST /api/openai/query` - Query the knowledge base using OpenAI Responses API
-  - Accepts: JSON with `{ "question": "your question", "pdf_id": optional_id }`
-  - Uses file_search tool to search PDFs directly in OpenAI
-  - No local downloads - uses files already uploaded to OpenAI
-  - Returns AI-generated answer with document citations
-- `DELETE /api/openai/pdf/{pdf_id}` - Remove a PDF from index
-  - Deletes file from OpenAI
-
 ## Development
 
 ### Running in Debug Mode
@@ -166,4 +84,4 @@ The application runs with `debug=True` by default. Remember to set `debug=False`
 
 ## License
 
-See LICENSE file for details.
+MIT
