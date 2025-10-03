@@ -51,9 +51,9 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                 `,
                 icon: 'info',
                 showCancelButton: true,
-                confirmButtonText: 'Yes'
-            }).then(async (result) => {
-                if (result.isConfirmed) {
+                confirmButtonText: 'Yes',
+                showLoaderOnConfirm: true,
+                preConfirm: async() => {
                     //get the selected pdf
                     const pdfSelect = document.getElementById('pdfSelect');
                     const pdfValue = pdfSelect.value;
@@ -84,49 +84,50 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                             vector_store_id: vectorStoreId
                         })
                     });
-                    if (resp.ok) {
-                        const data = await resp.json();
-                        //show the data back to the user formatted using swal
-                        swal.fire({
-                            title: 'Alignment Check Result',
-                            html: `
-                                <div>
-                                    <label for="issueSubtypeSelect"><b>Issue Subtype:</b></label>
-                                    <select id="issueSubtypeSelect" style="width:100%;margin-bottom:10px;">
-                                        ${
-                                            Object.keys(issueSubTypes).length > 0
-                                            ? Object.entries(issueSubTypes).map(([name, id]) =>
-                                                `<option value="${id}">${name}</option>`
-                                              ).join('')
-                                            : '<option value="">No subtypes found</option>'
-                                        }
-                                    </select>
-                                    <textarea id="alignmentCheckResult" style="width:100%;height:200px;">${data.answer}</textarea>
-                                </div>
-                            `,
-                            icon: 'info',
-                            confirmButtonText: 'Create Issue',
-                            showCancelButton: true
-                        }).then(async (result) => {
-                            if (result.isConfirmed) {
-                                //create the issue
-                                const issue = await fetch('/api/hubs/projects/' + selectedProjectId + '/issues', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json'
-                                    },
-                                    body: JSON.stringify({ title: 'Alignment Check Result', description: data.answer, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
-                                });
-                                if (issue.ok) {
-                                    alert('Issue created successfully');
-                                } else {
-                                    alert('Failed to create issue');
-                                }
+                    return resp.json();
+                }
+            }).then(async (resp) => {
+                if (resp.value.success) {
+                    //show the data back to the user formatted using swal
+                    swal.fire({
+                        title: 'Alignment Check Result',
+                        html: `
+                            <div>
+                                <label for="issueSubtypeSelect"><b>Issue Subtype:</b></label>
+                                <select id="issueSubtypeSelect" style="width:100%;margin-bottom:10px;">
+                                    ${
+                                        Object.keys(issueSubTypes).length > 0
+                                        ? Object.entries(issueSubTypes).map(([name, id]) =>
+                                            `<option value="${id}">${name}</option>`
+                                          ).join('')
+                                        : '<option value="">No subtypes found</option>'
+                                    }
+                                </select>
+                                <textarea id="alignmentCheckResult" style="width:100%;height:200px;">${resp.value.answer}</textarea>
+                            </div>
+                        `,
+                        icon: 'info',
+                        confirmButtonText: 'Create Issue',
+                        showCancelButton: true
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            //create the issue
+                            const issue = await fetch('/api/hubs/projects/' + selectedProjectId + '/issues', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ title: 'Alignment Check Result', description: data.answer, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
+                            });
+                            if (issue.ok) {
+                                alert('Issue created successfully');
+                            } else {
+                                alert('Failed to create issue');
                             }
-                        });
-                    } else {
-                        alert('Failed to start check');
-                    }
+                        }
+                    });
+                } else {
+                    alert('Failed to start check');
                 }
             });
         });
