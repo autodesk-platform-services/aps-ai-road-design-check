@@ -1,4 +1,4 @@
-class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
+class AlignmentCheckExtensionAI extends Autodesk.Viewing.Extension {
     constructor(viewer, options) {
       super(viewer, options);
     }
@@ -25,7 +25,28 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
         let dbIds = this.viewer.getSelection();
         this.viewer.model.getBulkProperties(dbIds, {}, function (results) {
             //filter Curves
-            let curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory.includes('Curve'));
+            //if selectedItem is DWG
+            let curvesProperties;
+            if (selectedItem.split('.')[1].toLowerCase() === 'dwg') {
+                curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory.includes('Curve'));
+            } 
+            else if (selectedItem.split('.')[1].toLowerCase() === 'nwc') {
+                curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory == 'Civil3D' && property.displayName.includes('Curve'));
+                curvesProperties.map(property => {
+                    property.displayCategory = property.displayName.split(':')[0];
+                    property.displayName = property.displayName.split(':')[1];
+                });            
+            }
+            else {
+                swal.fire({
+                    title: 'Unsupported File Type',
+                    text: 'Only DWG and NWC files are supported',
+                    icon: 'error'
+                });
+                return;
+            }
+            //Empty alignmentCheckDataAI
+            alignmentCheckDataAI = {};
             //group by property.displayCategory
             for (let property of curvesProperties) {
                 if (!alignmentCheckDataAI[property.displayCategory]) {
@@ -80,7 +101,7 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            question: 'Check the curves against the road design standards: ' + curves,
+                            question: 'Check the curves against the road design standards '+ `(units ${viewer.model.getUnitString()})` +': ' + curves,
                             vector_store_id: vectorStoreId
                         })
                     });
@@ -140,4 +161,4 @@ class AlignmentCheckExtension extends Autodesk.Viewing.Extension {
     }
   }
   
-  Autodesk.Viewing.theExtensionManager.registerExtension('AlignmentCheckExtension', AlignmentCheckExtension);
+  Autodesk.Viewing.theExtensionManager.registerExtension('AlignmentCheckExtensionAI', AlignmentCheckExtensionAI);

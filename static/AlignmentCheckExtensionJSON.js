@@ -25,7 +25,27 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
         let dbIds = this.viewer.getSelection();
         this.viewer.model.getBulkProperties(dbIds, {}, function (results) {
             //filter Curves
-            let curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory.includes('Curve'));
+            let curvesProperties;
+            if (selectedItem.split('.')[1].toLowerCase() === 'dwg') {
+                curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory.includes('Curve'));
+            } 
+            else if (selectedItem.split('.')[1].toLowerCase() === 'nwc') {
+                curvesProperties = results[0].properties.filter(property => property.displayCategory!=null).filter(property => property.displayCategory == 'Civil3D' && property.displayName.includes('Curve'));
+                curvesProperties.map(property => {
+                    property.displayCategory = property.displayName.split(':')[0];
+                    property.displayName = property.displayName.split(':')[1];
+                });            
+            }
+            else {
+                swal.fire({
+                    title: 'Unsupported File Type',
+                    text: 'Only DWG and NWC files are supported',
+                    icon: 'error'
+                });
+                return;
+            }
+            //Empty alignmentCheckDataJSON
+            alignmentCheckDataJSON = {};
             //group by property.displayCategory
             for (let property of curvesProperties) {
                 if (!alignmentCheckDataJSON[property.displayCategory]) {
