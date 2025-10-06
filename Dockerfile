@@ -13,6 +13,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy pyproject.toml first for better caching
@@ -27,9 +28,6 @@ COPY . .
 
 # Create uploads directory
 RUN mkdir -p uploads/temp
-
-# Expose port (Dokku will override this with $PORT)
-EXPOSE 8080
 
 # Run gunicorn
 CMD gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -
