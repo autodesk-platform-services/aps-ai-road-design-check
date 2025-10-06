@@ -1,13 +1,15 @@
 import { initViewer, loadModel } from './viewer.js';
 import { initTree } from './sidebar.js';
 
-const login = document.getElementById('login');
+const signin = document.getElementById('signin');
 try {
+    const help = document.getElementById('help');
+    help.onclick = showHelpDialog;
     const resp = await fetch('/api/auth/profile');
     if (resp.ok) {
         const user = await resp.json();
-        login.innerText = `Logout (${user.name})`;
-        login.onclick = () => {
+        signin.innerText = `Logout (${user.name})`;
+        signin.onclick = () => {
             const iframe = document.createElement('iframe');
             iframe.style.visibility = 'hidden';
             iframe.src = 'https://accounts.autodesk.com/Authentication/LogOut';
@@ -84,11 +86,43 @@ try {
             input.click();
         };
     } else {
-        login.innerText = 'Login';
-        login.onclick = () => window.location.replace('/api/auth/login');
+        signin.innerText = 'Sign In';
+        signin.onclick = () => window.location.replace('/api/auth/login');
     }
-    login.style.visibility = 'visible';
+    signin.style.visibility = 'visible';
 } catch (err) {
     alert('Could not initialize the application. See console for more details.');
     console.error(err);
+}
+
+async function showHelpDialog() {
+    Swal.fire({
+        title: '<strong>Helpers</strong>',
+        html:
+        `
+            <ul style='list-style-type:none; font-size:medium'>
+                <li>
+                    <a target='_blank' href='//tutorials.autodesk.io/#provision-access-in-other-products'>Provision</a>
+                    the client id:
+                    <input type='text' style='font-weight:bold' value='PVQ8rNNKB7ynJArbxhm6G8irUI4FbGgGtiCUb7QbGuX2c0AX' disabled>
+                    </input>
+                    in your hub.
+                </li>
+                <li>
+                    Find the complete Source Code
+                    <a target='_blank' href='https://github.com/autodesk-platform-services/aps-road-alignment-check-ai'>HERE</a>
+                </li>
+                <li>
+                    You can find a sample JSON to use in this sample
+                    <a href='https://github.com/autodesk-platform-services/aps-road-alignment-check-ai/assets/Highway-Design-Standards.json'>HERE</a>
+                </li>
+            </ul>
+        `,
+        showCloseButton: true,
+        showCancelButton: false,
+        focusConfirm: false,
+        width: 600,
+        confirmButtonText:
+        '<i class="fa fa-thumbs-up"></i> OK',
+    })
 }
