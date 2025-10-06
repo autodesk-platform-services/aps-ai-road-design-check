@@ -16,7 +16,7 @@ class AlignmentCheckExtensionAI extends Autodesk.Viewing.Extension {
       this.button.setToolTip('OpenAI Alignment Check');
       const icon = this.button.container.querySelector('.adsk-button-icon');
         if (icon) {
-            icon.style.backgroundImage = `url(${'https://img.icons8.com/external-those-icons-fill-those-icons/24/external-curve-traffic-road-signs-those-icons-fill-those-icons.png'})`; 
+            icon.style.backgroundImage = `url(${'https://img.icons8.com/sf-regular/48/bot.png'})`; 
             icon.style.backgroundSize = `24px`; 
             icon.style.backgroundRepeat = `no-repeat`; 
             icon.style.backgroundPosition = `center`; 
