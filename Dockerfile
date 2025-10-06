@@ -29,8 +29,8 @@ COPY . .
 RUN mkdir -p uploads/temp
 
 # Expose port (Dokku will override this with $PORT)
-EXPOSE 5000
+EXPOSE 8080
 
 # Run gunicorn
-CMD gunicorn app:app --bind 0.0.0.0:${PORT:-5000} --workers 4 --timeout 120 --access-logfile - --error-logfile -
+CMD gunicorn app:app --bind 0.0.0.0:${PORT:-8080} --workers 4 --timeout 120 --access-logfile - --error-logfile -
 
