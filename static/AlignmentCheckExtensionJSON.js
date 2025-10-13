@@ -187,7 +187,7 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                                 },
                                 body: JSON.stringify({ 
                                     title: document.getElementById('issueTitle').value, 
-                                    description: summaryHeader, 
+                                    description: document.getElementById('alignmentCheckResult').value, 
                                     status: 'open', 
                                     issue_subtype_id: document.getElementById('issueSubtypeSelect').value 
                                 })

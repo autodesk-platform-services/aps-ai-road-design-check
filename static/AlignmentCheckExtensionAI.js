@@ -139,7 +139,7 @@ class AlignmentCheckExtensionAI extends Autodesk.Viewing.Extension {
                                 headers: {
                                     'Content-Type': 'application/json'
                                 },
-                                body: JSON.stringify({ title: document.getElementById('issueTitle').value, description: data.answer, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
+                                body: JSON.stringify({ title: document.getElementById('issueTitle').value, description: document.getElementById('alignmentCheckResult').value, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
                             });
                             if (issue.ok) {
                                 alert('Issue created successfully');
