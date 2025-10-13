@@ -140,7 +140,7 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                     });
                     
                     // Add summary header
-                    const summaryHeader = `${jsonInput.standard || 'Highway Design Standards'}\n` +
+                    var summaryHeader = `${jsonInput.standard || 'Highway Design Standards'}\n` +
                         `Horizontal Curve Radius Check\n` +
                         `Design Speed: ${selectedSpeed} mph (Using ${standardSpeed} mph standard)\n` +
                         `Minimum Radius Required: ${minRadius} ft (emax=4%)\n` +
@@ -149,7 +149,7 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                         resultsText;
                     
                     //count the number of characters in the summaryHeader
-                    const summaryHeaderLength = summaryHeader.length;
+                    var summaryHeaderLength = summaryHeader.length;
                     //if summaryHeaderLength is greater than 1000, add a uppercase highlight mentioning that the result is too long to be used in Issues description and the user will need to shorten it
                     if (summaryHeaderLength > 1000) {
                         summaryHeader = 'THIS RESULT IS TOO LONG TO BE USED IN ISSUES DESCRIPTION AND THE USER WILL NEED TO SHORTEN IT\n' + summaryHeader.toUpperCase();
