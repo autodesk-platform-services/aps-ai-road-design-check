@@ -122,12 +122,7 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                                 allPassed = allPassed && curvePassed;
                                 alignmentCheckDataJSON[key].checked = true;
                                 
-                                if (curvePassed) {
-                                    alignmentCheckDataJSON[key].result = '✓ PASS';
-                                    resultsText += `${key}:\n`;
-                                    resultsText += `  Radius: ${curveRadiusValue} ft\n`;
-                                    resultsText += `  Status: PASS (Minimum required: ${minRadius} ft at ${standardSpeed} mph)\n\n`;
-                                } else {
+                                if (!curvePassed) {
                                     alignmentCheckDataJSON[key].result = '✗ FAIL';
                                     resultsText += `${key}:\n`;
                                     resultsText += `  Radius: ${curveRadiusValue} ft\n`;
@@ -153,11 +148,19 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                         `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n` +
                         resultsText;
                     
+                    //count the number of characters in the summaryHeader
+                    const summaryHeaderLength = summaryHeader.length;
+                    //if summaryHeaderLength is greater than 1000, add a uppercase highlight mentioning that the result is too long to be used in Issues description and the user will need to shorten it
+                    if (summaryHeaderLength > 1000) {
+                        summaryHeader = 'THIS RESULT IS TOO LONG TO BE USED IN ISSUES DESCRIPTION AND THE USER WILL NEED TO SHORTEN IT\n' + summaryHeader.toUpperCase();
+                    }
+
                     //show the data back to the user formatted using swal
                     swal.fire({
                         title: 'Alignment Check Result',
                         html: `
                             <div>
+                                <input type="text" id="issueTitle" style="width:100%;margin-bottom:10px;" placeholder="Issue Title">
                                 <label for="issueSubtypeSelect"><b>Issue Subtype:</b></label>
                                 <select id="issueSubtypeSelect" style="width:100%;margin-bottom:10px;">
                                     ${
@@ -183,7 +186,7 @@ class AlignmentCheckExtensionJSON extends Autodesk.Viewing.Extension {
                                     'Content-Type': 'application/json'
                                 },
                                 body: JSON.stringify({ 
-                                    title: 'Alignment Check Result - ' + (allPassed ? 'PASS' : 'FAIL'), 
+                                    title: document.getElementById('issueTitle').value, 
                                     description: summaryHeader, 
                                     status: 'open', 
                                     issue_subtype_id: document.getElementById('issueSubtypeSelect').value 

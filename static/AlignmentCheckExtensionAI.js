@@ -114,6 +114,7 @@ class AlignmentCheckExtensionAI extends Autodesk.Viewing.Extension {
                         title: 'Alignment Check Result',
                         html: `
                             <div>
+                                <input type="text" id="issueTitle" style="width:100%;margin-bottom:10px;" placeholder="Issue Title">
                                 <label for="issueSubtypeSelect"><b>Issue Subtype:</b></label>
                                 <select id="issueSubtypeSelect" style="width:100%;margin-bottom:10px;">
                                     ${
@@ -138,7 +139,7 @@ class AlignmentCheckExtensionAI extends Autodesk.Viewing.Extension {
                                 headers: {
                                     'Content-Type': 'application/json'
                                 },
-                                body: JSON.stringify({ title: 'Alignment Check Result', description: data.answer, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
+                                body: JSON.stringify({ title: document.getElementById('issueTitle').value, description: data.answer, status: 'open', issue_subtype_id: document.getElementById('issueSubtypeSelect').value })
                             });
                             if (issue.ok) {
                                 alert('Issue created successfully');
