@@ -28,11 +28,13 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-pro
 from Controllers.AuthController import auth_bp
 from Controllers.HubsController import hubs_bp
 from Controllers.OpenAIController import openai_bp
+from Controllers.OpenAISkillController import openai_skill_bp
 from Controllers.JsonController import json_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(hubs_bp)
 app.register_blueprint(openai_bp)
+app.register_blueprint(openai_skill_bp)
 app.register_blueprint(json_bp)
 
 

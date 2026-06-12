@@ -2,7 +2,7 @@
 
 A Python Flask web application that uses [Autodesk Platform Services (APS)](https://aps.autodesk.com) to verify horizontal curve data from Civil 3D alignments (and NWC files) against Department of Transportation design standards.
 
-Two fundamentally different verification philosophies are supported: **deterministic** (JSON) and **probabilistic** (OpenAI RAG).
+Three verification approaches are supported: **deterministic** (JSON), **probabilistic RAG** (OpenAI), and **Skills + RAG hybrid** (OpenAI).
 
 ---
 
@@ -11,6 +11,7 @@ Two fundamentally different verification philosophies are supported: **determini
 - [Architecture Overview](#architecture-overview)
 - [Approach 1 — Deterministic (JSON Standards)](#approach-1--deterministic-json-standards)
 - [Approach 2 — Probabilistic RAG (OpenAI)](#approach-2--probabilistic-rag-openai)
+- [Approach 3 — OpenAI Skills + RAG Hybrid](#approach-3--openai-skills--rag-hybrid)
 - [Approach Comparison](#approach-comparison)
 - [Setup](#setup)
 - [Usage](#usage)
@@ -24,16 +25,20 @@ Two fundamentally different verification philosophies are supported: **determini
 Civil 3D / NWC model
         │  (APS Viewer — curve properties via getBulkProperties)
         ▼
-┌──────────────────────────────────────────────────────────────┐
-│  AlignmentCheckExtensionJSON        AlignmentCheckExtensionAI │
-│  (deterministic check)              (AI-assisted check)       │
-└────────────┬─────────────────────────────┬───────────────────┘
-             │                             │
-             ▼                             ▼
-    JSON standards file          /api/openai/query
-    (local comparison)                     │
-                                  OpenAI gpt-4o
-                                  + Vector Store (RAG)
+┌────────────────────────────────────────────────────────────────────────────────┐
+│  AlignmentCheckExtensionJSON   AlignmentCheckExtensionAI   AlignmentCheckExtensionSkill │
+│  (deterministic check)         (RAG check)                 (Skills + RAG check) │
+└──────────┬─────────────────────────────┬──────────────────────────┬────────────┘
+           │                             │                          │
+           ▼                             ▼                          ▼
+  JSON standards file          /api/openai/query          /api/openai/skill/query
+  (local comparison)                    │                          │
+                                OpenAI gpt-4o              Step 1: file_search
+                                + file_search tool         → retrieve clauses
+                                + Vector Store (RAG)               │
+                                                           Step 2: Responses API
+                                                           + SKILL.md rubric
+                                                           + structured JSON output
 ```
 
 ---
@@ -130,18 +135,94 @@ When the standards library is large or changes frequently, or when you want to q
 
 ---
 
+## Approach 3 — OpenAI Skills + RAG Hybrid
+
+> **Investigation reference:** `openai-skills-rag-handoff.md` — ChatGPT investigation into whether OpenAI Skills can replace or augment the RAG layer.
+
+### How it works
+
+1. A PDF is indexed the same way as Approach 2 (the same vector store is reused).
+2. When the **AlignmentCheckExtensionSkill** toolbar button is clicked, the extension collects curve properties and sends them — as both a natural-language summary and a structured `design_data` JSON — to `/api/openai/skill/query`.
+3. The backend performs two sequential Responses API calls:
+   - **Step 1 — Retrieval:** A `file_search` call retrieves the most relevant standard clauses from the vector store. This call is retrieval-only; no evaluation happens here.
+   - **Step 2 — Evaluation:** A second Responses API call receives the design data **plus the retrieved clause text** and evaluates compliance against them. The evaluation method is defined by `Assets/design-standard-checker/SKILL.md` — a reusable rubric that encodes the comparison rules, confidence-scoring logic, citation requirements, and the strict JSON output schema.
+4. If `OPENAI_SKILL_ID` is set in `.env`, the hosted skill is attached via a `shell/container_auto/skill_reference` tool and SKILL.md is used as a fallback. If the env var is absent, SKILL.md content is injected as the `instructions` parameter directly.
+5. The response is a structured JSON compliance report (see `Assets/design-standard-checker/references/output-schema.md`) displayed as a per-check table with status, confidence, and grounded remediation.
+
+### Key architectural difference from Approach 2
+
+```
+Approach 2 — single Responses API call:
+  file_search retrieves AND model reasons over results in one step.
+  Output: markdown report.
+
+Approach 3 — two decoupled steps:
+  Step 1: file_search retrieves relevant clauses (retrieval layer).
+  Step 2: skill-guided Responses API call evaluates design data
+          against pre-retrieved clauses (evaluation layer).
+  Output: strict JSON compliance report.
+
+This means the standards index and the evaluation rubric can evolve
+independently — re-index the PDF without touching the skill, or update
+the rubric without re-indexing.
+```
+
+### Skill package
+
+```
+Assets/design-standard-checker/
+  SKILL.md                        ← evaluation instructions and rules
+  references/
+    output-schema.md              ← strict JSON schema the model must return
+    comparison-rubric.md          ← pass/fail/needs_review and confidence rules
+    retrieval-contract.md         ← shape of retrieved_clauses passed to the model
+```
+
+To use a hosted OpenAI skill, package the directory as a ZIP, upload it, and set `OPENAI_SKILL_ID` in `.env`. Without it the app uses the SKILL.md content as instructions (fallback mode — functionally equivalent, no container environment).
+
+### Pros
+
+| | |
+|---|---|
+| **Reusable evaluation logic** | Rubric, output schema, and citation rules are defined once in the skill; every call reuses the same judge without repeating a long system prompt. |
+| **Decoupled standards from process** | Update the PDF index without touching the evaluation rubric, or update the rubric without re-indexing. |
+| **Structured JSON output** | Strict schema enforced by the skill; downstream tooling (issue creation, CI, audits) can parse the report directly. |
+| **Grounded citations** | Skill explicitly forbids inventing standards; all citations must come from retrieved clauses. |
+| **Per-check confidence** | Each check carries a `high / medium / low` confidence level alongside the pass/fail verdict. |
+| **Grounded remediation** | Corrective actions are only generated when a specific clause supports them. |
+
+### Cons
+
+| | |
+|---|---|
+| **Skills API is newer / beta** | The `skill_reference` / container shell environment may not be in GA for all OpenAI accounts; the fallback (SKILL.md as instructions) works everywhere. |
+| **Two-step latency** | Two sequential Responses API calls roughly double the wall-clock time versus Approach 2's single call. |
+| **Skill management overhead** | Hosted skills must be uploaded, versioned, and re-uploaded when the rubric changes. |
+| **Same service dependency** | Still requires OpenAI availability; same data-residency constraints as Approach 2. |
+| **Higher token cost** | Two model calls consume more tokens than one, even though the second call receives pre-retrieved context rather than searching the full index. |
+
+### When to use
+
+When you need a **machine-readable compliance report** for downstream automation (CI gates, issue creation, audit trails), or when the evaluation rubric needs to be maintained and versioned separately from the standards content. Also useful when the same rubric will be applied across multiple projects or standards libraries.
+
+---
+
 ## Approach Comparison
 
-| | JSON (Deterministic) | OpenAI RAG (Probabilistic) |
-|---|---|---|
-| **Result reproducibility** | 100% deterministic | Non-deterministic |
-| **Standards source** | Hand-crafted JSON | Original PDF |
-| **Indexing required** | No | Yes (async, ~30–120 s) |
-| **Per-query cost** | $0 | Low (retrieved chunk tokens only) |
-| **Citation accuracy** | Exact (rule-based) | Approximate |
-| **Offline capable** | Yes | No |
-| **Maintenance** | Manual JSON updates | Re-index updated PDF |
-| **Best for** | Audits, CI/CD, submissions | Large libraries, design assistance |
+| | JSON (Deterministic) | OpenAI RAG (Probabilistic) | OpenAI Skills + RAG |
+|---|---|---|---|
+| **Result reproducibility** | 100% deterministic | Non-deterministic | Non-deterministic |
+| **Standards source** | Hand-crafted JSON | Original PDF | Original PDF (same index as Approach 2) |
+| **Indexing required** | No | Yes (async, ~30–120 s) | Yes (same as Approach 2) |
+| **Per-query cost** | $0 | Low (retrieved chunk tokens only) | Moderate (two model calls) |
+| **Output format** | Plain text | Markdown report | Structured JSON |
+| **Citation accuracy** | Exact (rule-based) | Approximate | Clause-grounded (enforced by skill) |
+| **Per-check confidence** | Implicit (pass/fail) | None | Explicit (high / medium / low) |
+| **Offline capable** | Yes | No | No |
+| **Evaluation rubric versioning** | In JSON file | In system prompt (code) | In SKILL.md (separate asset) |
+| **Maintenance** | Manual JSON updates | Re-index updated PDF | Re-index PDF and/or update SKILL.md independently |
+| **Skills API required** | No | No | Optional (fallback to SKILL.md instructions) |
+| **Best for** | Audits, CI/CD, submissions | Large libraries, design assistance | Automated pipelines, audit trails, rubric reuse across projects |
 
 ---
 
@@ -210,6 +291,15 @@ The application will be available at `http://localhost:8080`.
 3. Click the **AlignmentCheckExtensionAI** toolbar button.
 4. Choose the indexed PDF from the dropdown, set the design speed, and confirm.
 5. The query is sent to `gpt-4o` with the `file_search` tool; the structured compliance report is returned.
+
+### OpenAI Skills + RAG verification
+
+1. Index a PDF the same way as above (the same vector store is reused).
+2. *(Optional)* Set `OPENAI_SKILL_ID` in `.env` with the ID of a hosted `design-standard-checker` skill. If not set, the app falls back to loading `Assets/design-standard-checker/SKILL.md` as instructions.
+3. Select one or more curves in the viewer.
+4. Click the **AlignmentCheckExtensionSkill** toolbar button.
+5. Set the design speed and click **Run Check**.
+6. The backend runs two sequential calls: clause retrieval via `file_search`, then skill-guided evaluation. A per-check compliance table (with status, confidence, and remediation) is displayed. The issue description is pre-populated with the JSON summary.
 
 ---
 
