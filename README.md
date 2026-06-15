@@ -4,6 +4,9 @@ A Python Flask web application that uses [Autodesk Platform Services (APS)](http
 
 Three verification approaches are supported: **deterministic** (JSON), **probabilistic RAG** (OpenAI), and **Skills + RAG hybrid** (OpenAI).
 
+## Video
+[![Walkthrough](https://www.youtube.com/watch?v=hB_uJ4rXTzw)](https://www.youtube.com/watch?v=hB_uJ4rXTzw)
+
 ---
 
 ## Table of Contents
