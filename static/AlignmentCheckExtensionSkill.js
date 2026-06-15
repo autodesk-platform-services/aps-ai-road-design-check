@@ -79,6 +79,8 @@ class AlignmentCheckExtensionSkill extends Autodesk.Viewing.Extension {
                     preConfirm: async () => {
                         const pdfSelect = document.getElementById('pdfSelect');
                         const vectorStoreId = pdfSelect ? pdfSelect.value : null;
+                        const skillSelect = document.getElementById('skillSelect');
+                        const skillId = skillSelect && skillSelect.value ? skillSelect.value : null;
                         const maxSpeedSlider = document.getElementById('maxSpeedSliderSkill');
                         const selectedSpeed = maxSpeedSlider ? maxSpeedSlider.value : 50;
                         const units = viewer.model.getUnitString();
@@ -106,7 +108,8 @@ class AlignmentCheckExtensionSkill extends Autodesk.Viewing.Extension {
                             body: JSON.stringify({
                                 question: `Check the curves against road design standards (units ${units}):\n${curveSummary}`,
                                 design_data: designData,
-                                vector_store_id: vectorStoreId
+                                vector_store_id: vectorStoreId,
+                                skill_id: skillId
                             })
                         });
                         return resp.json();

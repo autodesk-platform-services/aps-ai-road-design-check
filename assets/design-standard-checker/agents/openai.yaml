@@ -1,0 +1,7 @@
+name: design-standard-checker
+description: >
+  Evaluates road design horizontal curve data against retrieved standard clauses
+  and returns a structured JSON compliance report with per-check status,
+  confidence, citations, and grounded remediation.
+instructions: SKILL.md
+version: "1.0"

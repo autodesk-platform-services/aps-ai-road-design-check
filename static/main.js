@@ -61,6 +61,55 @@ try {
             pdfSelect.appendChild(option);
         });
 
+        // Populate the skill selection dropdown
+        const skillSelect = document.getElementById('skillSelect');
+        try {
+            const skillsResp = await fetch('/api/openai/skill/list');
+            if (skillsResp.ok) {
+                const skills = await skillsResp.json();
+                skills.forEach(skill => {
+                    const option = document.createElement('option');
+                    option.value = skill.skill_id;
+                    option.innerText = skill.name;
+                    skillSelect.appendChild(option);
+                });
+            }
+        } catch (e) {
+            console.warn('Skills API unavailable — fallback mode only', e);
+        }
+
+        // Upload a skill ZIP
+        const uploadSkillButton = document.getElementById('uploadSkill');
+        uploadSkillButton.onclick = async () => {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.zip,application/zip';
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const resp = await fetch('/api/openai/skill/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        const option = document.createElement('option');
+                        option.value = data.skill.skill_id;
+                        option.innerText = data.skill.name;
+                        skillSelect.appendChild(option);
+                        skillSelect.value = data.skill.skill_id;
+                        alert(`Skill "${data.skill.name}" uploaded successfully`);
+                    } else {
+                        const err = await resp.json();
+                        alert('Failed to upload skill: ' + (err.error || 'Unknown error'));
+                    }
+                }
+            };
+            input.click();
+        };
+
         //Index a PDF to be used as knowledge base for OpenAI
         const indexPDFButton = document.getElementById('indexpdf');
         indexPDFButton.onclick = async () => {

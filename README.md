@@ -244,6 +244,8 @@ Edit `.env` and add your credentials:
   - Set `APS_CLIENT_ID` and `APS_CLIENT_SECRET`
 - **OpenAI API**: Get your API key at https://platform.openai.com/api-keys
   - Set `OPENAI_API_KEY`
+- **OpenAI model** *(optional)*: Set `OPENAI_MODEL` to override the model used by Approaches 2 and 3. Defaults to `gpt-5.4-mini` if not set.
+- **OpenAI skill** *(optional)*: Set `OPENAI_SKILL_ID` to a hosted skill ID to enable the container-based skill tool in Approach 3. If not set, `Assets/design-standard-checker/SKILL.md` is injected as instructions instead (fallback mode).
 
 ### 2. Create Virtual Environment
 

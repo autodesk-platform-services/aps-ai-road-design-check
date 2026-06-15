@@ -36,6 +36,8 @@ body, html {
 #header > * {
     height: 2em;
     margin: 0 0.5em;
+    box-sizing: border-box;
+    font-size: 1em;
 }
 
 #login, #indexpdf {
