@@ -90,7 +90,7 @@ When you need **reproducible, auditable compliance decisions** and the standards
 1. A PDF is uploaded via the **Index PDF** button.  
    The backend (`/api/openai/indexpdf`) uploads it to OpenAI, creates a vector store, and **polls until indexing is complete** before returning — so the PDF is ready to query immediately.
 2. OpenAI chunks the PDF into overlapping segments and embeds each chunk into a high-dimensional vector space. Chunks and their vectors are stored in OpenAI's managed vector store.
-3. At query time (`/api/openai/query`), the `gpt-4o` model uses its built-in `file_search` tool to:
+3. At query time (`/api/openai/query`), the `gpt-5.4` model uses its built-in `file_search` tool to:
    - Embed the question
    - Retrieve the most semantically relevant chunks from the vector store
    - Generate a structured compliance report with citations
@@ -98,7 +98,7 @@ When you need **reproducible, auditable compliance decisions** and the standards
 
 ### System prompt
 
-The system prompt (`Controllers/OpenAIController.py › SYSTEM_PROMPT`) instructs `gpt-4o` to:
+The system prompt (`Controllers/OpenAIController.py › SYSTEM_PROMPT`) instructs `gpt-5.4` to:
 
 - Extract every curve parameter from the question (radius, design speed, superelevation, etc.) and note its unit.
 - Search the indexed documents for the governing threshold for each parameter, citing document name, section, and page.
@@ -122,7 +122,7 @@ The response is always returned in a fixed markdown structure — Assessment / P
 | | |
 |---|---|
 | **Non-deterministic** | The same query may return slightly different answers across runs. |
-| **API costs** | Both indexing (file upload + vector store) and querying (gpt-4o tokens) incur costs. |
+| **API costs** | Both indexing (file upload + vector store) and querying (gpt-5.4 tokens) incur costs. |
 | **Indexing latency** | Processing a new PDF is asynchronous and can take 30–120 seconds. |
 | **Chunking loss** | Relevant context split across chunk boundaries may be missed. |
 | **Citation accuracy** | The model may misattribute or paraphrase citations imprecisely. |
@@ -244,7 +244,7 @@ Edit `.env` and add your credentials:
   - Set `APS_CLIENT_ID` and `APS_CLIENT_SECRET`
 - **OpenAI API**: Get your API key at https://platform.openai.com/api-keys
   - Set `OPENAI_API_KEY`
-- **OpenAI model** *(optional)*: Set `OPENAI_MODEL` to override the model used by Approaches 2 and 3. Defaults to `gpt-5.4-mini` if not set.
+- **OpenAI model** *(optional)*: Set `OPENAI_MODEL` to override the model used by Approaches 2 and 3. Defaults to `gpt-5.4` if not set.
 - **OpenAI skill** *(optional)*: Set `OPENAI_SKILL_ID` to a hosted skill ID to enable the container-based skill tool in Approach 3. If not set, `Assets/design-standard-checker/SKILL.md` is injected as instructions instead (fallback mode).
 
 ### 2. Create Virtual Environment
