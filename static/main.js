@@ -10,14 +10,8 @@ try {
         const user = await resp.json();
         signin.innerText = `Logout (${user.name})`;
         signin.onclick = () => {
-            const iframe = document.createElement('iframe');
-            iframe.style.visibility = 'hidden';
-            iframe.src = 'https://accounts.autodesk.com/Authentication/LogOut';
-            document.body.appendChild(iframe);
-            iframe.onload = () => {
-                window.location.replace('/api/auth/logout');
-                document.body.removeChild(iframe);
-            };
+            window.location.href = 'https://developer.api.autodesk.com/authentication/v2/logout'
+                + '?post_logout_redirect_uri=' + encodeURIComponent(window.location.origin);
         }
         const viewer = await initViewer(document.getElementById('preview'));
         initTree('#tree', (id) => loadModel(viewer, window.btoa(id).replace(/=/g, '')));

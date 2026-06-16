@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Validate required environment variables
-REQUIRED_ENV_VARS = ['APS_CLIENT_ID', 'APS_CLIENT_SECRET', 'APS_CALLBACK_URL', 'OPENAI_API_KEY']
+REQUIRED_ENV_VARS = ['APS_CLIENT_ID', 'APS_CLIENT_SECRET', 'APS_CALLBACK_URL', 'OPENAI_API_KEY', 'SECRET_KEY']
 missing_vars = [var for var in REQUIRED_ENV_VARS if not os.getenv(var)]
 
 if missing_vars:
@@ -23,7 +23,7 @@ if missing_vars:
     sys.exit(1)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-production')
+app.secret_key = os.getenv('SECRET_KEY')
 
 from Controllers.AuthController import auth_bp
 from Controllers.HubsController import hubs_bp
@@ -42,4 +42,4 @@ def index():
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=8080, debug=os.getenv('FLASK_DEBUG', 'false').lower() == 'true')

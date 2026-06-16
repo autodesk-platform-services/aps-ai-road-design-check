@@ -44,6 +44,8 @@ Civil 3D / NWC model
                                                            + structured JSON output
 ```
 
+> **Note — Model Derivative translation:** Files must be translated to SVF/SVF2 format by the Model Derivative API before the APS Viewer can display them and before `getBulkProperties` can access the property database. ACC and BIM 360 projects translate files automatically on upload; OSS-hosted files require an explicit translation job.
+
 ---
 
 ## Approach 1 — Deterministic (JSON Standards)
@@ -244,7 +246,8 @@ cp .env.example .env
 
 Edit `.env` and add your credentials:
 - **Autodesk Platform Services**: Get credentials at https://aps.autodesk.com/myapps
-  - Set `APS_CLIENT_ID` and `APS_CLIENT_SECRET`
+  - Set `APS_CLIENT_ID`, `APS_CLIENT_SECRET`, and `APS_CALLBACK_URL`
+    (`APS_CALLBACK_URL` defaults to `http://localhost:8080/api/auth/callback`; update this for non-local deployments)
 - **OpenAI API**: Get your API key at https://platform.openai.com/api-keys
   - Set `OPENAI_API_KEY`
 - **OpenAI model** *(optional)*: Set `OPENAI_MODEL` to override the model used by Approaches 2 and 3. Defaults to `gpt-5.4` if not set.

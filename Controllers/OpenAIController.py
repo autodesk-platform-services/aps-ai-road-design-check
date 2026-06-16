@@ -124,7 +124,7 @@ def _upload_file(file_storage) -> str:
     client = _get_client()
     response = client.files.create(
         file=(file_storage.filename, file_storage.stream, file_storage.content_type),
-        purpose="assistants",
+        purpose="user_data",
     )
     return response.id
 
