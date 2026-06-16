@@ -104,6 +104,7 @@ Cons
 When to use
 
 When the standards library is difficult to automate or changes frequently, and you need a tool to help reviewers navigate large documents faster. Treat the output as a first-pass triage.
+
 ---
 
 ## Approach 3 — OpenAI Skills + RAG Hybrid
