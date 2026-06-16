@@ -60,6 +60,7 @@ Cons
 - Limited scope: Only checks what is explicitly defined. implicit requirements are missed
 
 When to use
+
 When you have restrictions to probabilistic approaches and the standards are stable and well-defined.
 
 ---
@@ -101,6 +102,7 @@ Cons
 - Black-box reasoning: Cannot fully trace why a specific threshold was or was not applied
 
 When to use
+
 When the standards library is difficult to automate or changes frequently, and you need a tool to help reviewers navigate large documents faster. Treat the output as a first-pass triage.
 ---
 
@@ -163,28 +165,8 @@ Cons
 - Black-box reasoning: Cannot fully trace why a specific threshold was or was not applied
 
 When to use
+
 When you need a more structured compliance report, or when the evaluation rubric needs to be maintained and versioned separately from the standards content. Also useful when the same rubric will be applied across multiple projects or standards libraries.
-
----
-
-## Approach Comparison
-
-| | JSON (Deterministic) | OpenAI RAG (Probabilistic) | OpenAI Skills + RAG |
-|---|---|---|---|
-| **Result reproducibility** | 100% deterministic | Non-deterministic | Non-deterministic |
-| **Standards source** | Hand-crafted JSON | Original PDF | Original PDF (same index as Approach 2) |
-| **Indexing required** | No | Yes (async, ~30–120 s) | Yes (same as Approach 2) |
-| **Per-query cost** | $0 | Low (retrieved chunk tokens only) | Moderate (two model calls) |
-| **Output format** | Plain text | Markdown report | Structured JSON |
-| **Citation accuracy** | Exact (rule-based) | Approximate | Clause-grounded (enforced by skill) |
-| **Per-check confidence** | Implicit (pass/fail) | None | Explicit (high / medium / low) |
-| **Offline capable** | Yes | No | No |
-| **Evaluation rubric versioning** | In JSON file | In system prompt (code) | In SKILL.md (separate asset) |
-| **Maintenance** | Manual JSON updates | Re-index updated PDF | Re-index PDF and/or update SKILL.md independently |
-| **Skills API required** | No | No | Optional (fallback to SKILL.md instructions) |
-| **Best for** | Audits, CI/CD, submissions | Large libraries, design assistance | Automated pipelines, audit trails, rubric reuse across projects |
-
----
 
 ## Setup
 
