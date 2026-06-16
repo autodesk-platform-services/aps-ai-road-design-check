@@ -1,6 +1,6 @@
 # APS Road Design Check
 
-A Python Flask web application that uses [Autodesk Platform Services (APS)](https://aps.autodesk.com) to verify horizontal curve data from Civil 3D alignments (and NWC files) against Department of Transportation design standards.
+A Python Flask web application that uses [Autodesk Platform Services (APS)](https://aps.autodesk.com) to verify horizontal curve data from Civil 3D alignments against design standards.
 
 Three verification approaches are supported: **deterministic** (JSON), **probabilistic RAG** (OpenAI), and **Skills + RAG hybrid** (OpenAI).
 
@@ -48,43 +48,19 @@ Civil 3D / NWC model
 
 ---
 
-## Approach 1 — Deterministic (JSON Standards)
+Pros
+- Fully reproducible: Same inputs always produce the same output
+- Auditable: The result traces back to an exact rule in the standards file
+- Version-controllable: Standards live in source control alongside the code
 
-### How it works
+Cons
+- Manual conversion required: Official documents must be translated into structured data by hand
+- No semantic understanding: Cannot handle conditional or nuanced requirements
+- Maintenance burden: Must be updated whenever standards change
+- Limited scope: Only checks what is explicitly defined. implicit requirements are missed
 
-1. A standards JSON file is uploaded via the **JSON Input** button.
-   The file encodes design thresholds by speed class, e.g.:
-   ```json
-   { "horizontal_curve": { "minimum_radius_by_speed": { "50_mph": { "emax_4_percent_ft": 818 } } } }
-   ```
-2. The viewer extension (`AlignmentCheckExtensionJSON`) reads each selected curve's radius and design speed directly from the model.
-3. It looks up the matching speed key in the JSON, retrieves `emax_4_percent_ft`, and compares the actual radius against it.
-4. A pass/fail report is generated locally — no network call, no model inference.
-
-### Pros
-
-| | |
-|---|---|
-| **Fully reproducible** | Same inputs always produce the same output. |
-| **No API costs** | Runs entirely in the browser / server with no external calls. |
-| **Auditable** | Every pass/fail is traceable to an exact line in the JSON file. |
-| **Instant** | Comparison is pure arithmetic — sub-millisecond per curve. |
-| **Works offline** | No dependency on third-party services. |
-| **Version-controllable** | Standards files live in git alongside the code. |
-
-### Cons
-
-| | |
-|---|---|
-| **Manual conversion required** | Official standards PDFs must be translated into JSON by hand. |
-| **Brittle to schema changes** | Any restructure of the JSON breaks the comparison logic. |
-| **No semantic understanding** | Cannot handle nuanced language in standards ("unless otherwise specified…"). |
-| **Maintenance burden** | Must be updated manually whenever standards are revised. |
-| **Limited scope** | Only checks what is explicitly in the JSON; misses implicit requirements. |
-
-### When to use
-
-When you need **reproducible, auditable compliance decisions** and the standards are stable and well-structured. Ideal for CI/CD pipelines, batch processing, and regulatory submissions.
+When to use
+When you have restrictions to probabilistic approaches and the standards are stable and well-defined.
 
 ---
 
@@ -111,33 +87,21 @@ The system prompt (`Controllers/OpenAIController.py › SYSTEM_PROMPT`) instruct
 
 The response is always returned in a fixed markdown structure — Assessment / Parameters Checked table / Citations / Recommendations — so the viewer extension can display it consistently regardless of the document content.
 
-### Pros
+Pros
+- Works from official documents: No manual conversion needed
+- Semantic retrieval: Finds relevant standards even with varied phrasing
+- Scales to large libraries: Multiple documents can be searched in a single query
+- Lower setup cost: Index once, reuse across many queries
 
-| | |
-|---|---|
-| **Works from official PDFs** | No manual conversion — index the actual document. |
-| **Semantic retrieval** | Finds relevant standards even with varied wording or phrasing. |
-| **Index once, query many** | Vector stores persist on OpenAI; per-query cost covers only the retrieved chunks. |
-| **Scales to large libraries** | Multiple PDFs can be indexed and searched across in a single query. |
-| **Natural language reasoning** | Can handle conditional and nuanced standard requirements. |
-| **Cross-document citations** | A single query can retrieve from multiple standards documents. |
+Cons
+- Non-deterministic: The same query may return different results across runs
+- Requires human verification: Citations may be incomplete, misquoted, or incorrect
+- Service dependency: Design data is sent to an external provider
+- Indexing latency: Processing new documents takes time
+- Black-box reasoning: Cannot fully trace why a specific threshold was or was not applied
 
-### Cons
-
-| | |
-|---|---|
-| **Non-deterministic** | The same query may return slightly different answers across runs. |
-| **API costs** | Both indexing (file upload + vector store) and querying (gpt-5.4 tokens) incur costs. |
-| **Indexing latency** | Processing a new PDF is asynchronous and can take 30–120 seconds. |
-| **Chunking loss** | Relevant context split across chunk boundaries may be missed. |
-| **Citation accuracy** | The model may misattribute or paraphrase citations imprecisely. |
-| **Service dependency** | Requires OpenAI availability; data is stored on OpenAI's infrastructure. |
-| **Black-box reasoning** | Cannot fully trace why a specific threshold was or was not applied. |
-
-### When to use
-
-When the standards library is large or changes frequently, or when you want to query multiple documents with a single prompt. Good for design assistance and exploratory checks, where approximate answers with citations are more valuable than strict auditability.
-
+When to use
+When the standards library is difficult to automate or changes frequently, and you need a tool to help reviewers navigate large documents faster. Treat the output as a first-pass triage.
 ---
 
 ## Approach 3 — OpenAI Skills + RAG Hybrid
@@ -185,30 +149,21 @@ Assets/design-standard-checker/
 
 To use a hosted OpenAI skill, package the directory as a ZIP, upload it, and set `OPENAI_SKILL_ID` in `.env`. Without it the app uses the SKILL.md content as instructions (fallback mode — functionally equivalent, no container environment).
 
-### Pros
+Pros
+- Structured output: Enforced schema makes results easier to parse by downstream tools
+- Decoupled: Update the standards index or the evaluation rubric independently
+- Consistent evaluation: Rubric is defined once and reused across checks
 
-| | |
-|---|---|
-| **Reusable evaluation logic** | Rubric, output schema, and citation rules are defined once in the skill; every call reuses the same judge without repeating a long system prompt. |
-| **Decoupled standards from process** | Update the PDF index without touching the evaluation rubric, or update the rubric without re-indexing. |
-| **Structured JSON output** | Strict schema enforced by the skill; downstream tooling (issue creation, CI, audits) can parse the report directly. |
-| **Grounded citations** | Skill explicitly forbids inventing standards; all citations must come from retrieved clauses. |
-| **Per-check confidence** | Each check carries a `high / medium / low` confidence level alongside the pass/fail verdict. |
-| **Grounded remediation** | Corrective actions are only generated when a specific clause supports them. |
+Cons
+- Non-deterministic: The same query may return different results across runs
+- Requires human verification: Same hallucination risk as Approach 2
+- Higher latency and token cost: Two model calls instead of one
+- Service dependency: Design data is sent to an external provider
+- Rubric overhead: Evaluation logic must be maintained and versioned separately
+- Black-box reasoning: Cannot fully trace why a specific threshold was or was not applied
 
-### Cons
-
-| | |
-|---|---|
-| **Skills API is newer / beta** | The `skill_reference` / container shell environment may not be in GA for all OpenAI accounts; the fallback (SKILL.md as instructions) works everywhere. |
-| **Two-step latency** | Two sequential Responses API calls roughly double the wall-clock time versus Approach 2's single call. |
-| **Skill management overhead** | Hosted skills must be uploaded, versioned, and re-uploaded when the rubric changes. |
-| **Same service dependency** | Still requires OpenAI availability; same data-residency constraints as Approach 2. |
-| **Higher token cost** | Two model calls consume more tokens than one, even though the second call receives pre-retrieved context rather than searching the full index. |
-
-### When to use
-
-When you need a **machine-readable compliance report** for downstream automation (CI gates, issue creation, audit trails), or when the evaluation rubric needs to be maintained and versioned separately from the standards content. Also useful when the same rubric will be applied across multiple projects or standards libraries.
+When to use
+When you need a more structured compliance report, or when the evaluation rubric needs to be maintained and versioned separately from the standards content. Also useful when the same rubric will be applied across multiple projects or standards libraries.
 
 ---
 
